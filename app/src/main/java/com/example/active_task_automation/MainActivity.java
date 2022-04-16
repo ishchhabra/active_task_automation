@@ -5,75 +5,93 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 
 import android.Manifest;
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.location.Location;
+import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Bundle;
-import android.os.Looper;
-import android.util.Log;
+import android.provider.Settings;
+import android.widget.TextView;
+
+import org.w3c.dom.Text;
 
 //import com.google.android.gms.location.FusedLocationProviderClient;
-import com.google.android.gms.location.LocationCallback;
-import com.google.android.gms.location.LocationRequest;
-import com.google.android.gms.location.LocationResult;
-import com.google.android.gms.location.LocationServices;
-import com.google.android.gms.tasks.CancellationToken;
-import com.google.android.gms.tasks.OnSuccessListener;
-import com.google.android.gms.tasks.OnTokenCanceledListener;
+
 
 public class MainActivity extends AppCompatActivity {
     //    LocationManager locationManager;
-//    LocationListener locationListener;
-    private FusedLocationProviderClient fusedLocationClient;
+    //    LocationListener locationListener;
+    private LocationManager locationManager;
+    private TextView longitudeTextView;
+    private TextView latitudeTextView;
+    int PERMISSION = 44;
+    private TextView DNDTextView;
 
+    @SuppressLint("MissingPermission")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this,
-                    new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
-                    200);
+        latitudeTextView = (TextView) findViewById(R.id.latitude);
+        longitudeTextView = (TextView) findViewById(R.id.longitude);
+        DNDTextView = (TextView) findViewById(R.id.dndstatus);
+
+        locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+        LocationListener locationListener = new MyLocationListener();
+        if (checkPermissions()) {
+            locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 5000, 10, locationListener);
+        } else {
+            requestPermissions();
         }
-        Log.e("[GPS]", fusedLocationClient.toString());
-        fusedLocationClient.requestLocationUpdates(new LocationRequest(), new LocationCallback() {
-            @Override
-            public void onLocationResult(LocationResult locationResult) {
-                super.onLocationResult(locationResult);
 
-                if (locationResult == null) {
-                    Log.e("[GPS]", "SSSSSSSSSSS");
-                }
+        int ret = 0;
+        try {
+            ret = getDNDStatus();
+        } catch (Settings.SettingNotFoundException e) {
+            e.printStackTrace();
+        }
+        DNDTextView.setText("" + ret);
+    }
 
-                for (Location location : locationResult.getLocations()) {
-                    Log.e("[GPS]", String.valueOf(location.getTime()));
-                }
-            }
-        }, Looper.getMainLooper());
+    public int getDNDStatus() throws Settings.SettingNotFoundException {
+        return Settings.Global.getInt(getContentResolver(), "zen_mode");
+    }
+
+    private boolean checkPermissions() {
+        boolean check1 = ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED;
+        boolean check2 = ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED;
+        return check1 && check2;
+    }
+
+    private void requestPermissions() {
+        ActivityCompat.requestPermissions(this, new String[] {
+                Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION
+        }, PERMISSION);
+    }
+
+    class MyLocationListener implements LocationListener{
 
 
-//        this.locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
-//        this.locationListener = new LocationListener();
-//
-//        Log.e("[GPS]", locationListener.toString());
-//        this.locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0, locationListener);
+        @Override
+        public void onLocationChanged(@NonNull Location location) {
+            double latitude = location.getLatitude();
+            double longitude = location.getLongitude();
+
+            latitudeTextView.setText("" + latitude);
+            longitudeTextView.setText("" + longitude);
+        }
+
+        @Override
+        public void onProviderEnabled(@NonNull String provider) {
+            LocationListener.super.onProviderEnabled(provider);
+        }
+
+        @Override
+        public void onProviderDisabled(@NonNull String provider) {
+            LocationListener.super.onProviderDisabled(provider);
+        }
     }
 }
-
-//
-//class LocationListener implements android.location.LocationListener {
-//    @Override
-//    public void onLocationChanged(Location location) {
-//        if (location != null) {
-//            double latitude = location.getLatitude();
-//            double longitude = location.getLongitude();
-//
-//            Log.e("[GPS]",  latitude + " " +  longitude);
-//        }
-//    }
-//
-//
-//}

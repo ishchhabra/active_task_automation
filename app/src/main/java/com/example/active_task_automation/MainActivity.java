@@ -12,76 +12,111 @@ import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Bundle;
+import android.os.Environment;
 import android.provider.Settings;
 import android.widget.TextView;
 
 import org.w3c.dom.Text;
 
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.util.Timer;
+import java.util.TimerTask;
+
 //import com.google.android.gms.location.FusedLocationProviderClient;
 
 
 public class MainActivity extends AppCompatActivity {
-    //    LocationManager locationManager;
-    //    LocationListener locationListener;
-    private LocationManager locationManager;
+    private File gps_fd;
+    private FileOutputStream gps_fos;
+
+    private File dnd_fd;
+    private FileOutputStream dnd_fos;
+
+    private File accelerometer_fd;
+
+    private File barometer_fd;
+
+
+    private int LOCATION_PERMISSION_CODE = 44;
+
+
     private TextView longitudeTextView;
     private TextView latitudeTextView;
-    int PERMISSION = 44;
     private TextView DNDTextView;
 
-    @SuppressLint("MissingPermission")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        latitudeTextView = (TextView) findViewById(R.id.latitude);
-        longitudeTextView = (TextView) findViewById(R.id.longitude);
-        DNDTextView = (TextView) findViewById(R.id.dndstatus);
-
-        locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
-        LocationListener locationListener = new MyLocationListener();
-        if (checkPermissions()) {
-            locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 5000, 10, locationListener);
-        } else {
-            requestPermissions();
-        }
-
-        int ret = 0;
+        // Open all files.
         try {
-            ret = getDNDStatus();
-        } catch (Settings.SettingNotFoundException e) {
+            gps_fd = new File(Environment.getExternalStorageDirectory().getAbsolutePath(), "gps_data.csv");
+            gps_fos = new FileOutputStream(gps_fd);
+
+            dnd_fd = new File(Environment.getExternalStorageDirectory().getAbsolutePath(), "dnd_data.csv");
+            dnd_fos = new FileOutputStream(dnd_fd);
+
+        } catch (FileNotFoundException e) {
             e.printStackTrace();
         }
-        DNDTextView.setText("" + ret);
+
+        // GPS information
+        LocationManager locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+        LocationListener locationListener = new MyLocationListener();
+        if (
+                ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED &&
+                ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+            locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000, 1, locationListener);
+        } else {
+            ActivityCompat.requestPermissions(this, new String[]{
+                    Manifest.permission.ACCESS_FINE_LOCATION,
+                    Manifest.permission.ACCESS_COARSE_LOCATION
+            }, LOCATION_PERMISSION_CODE);
+        }
+
+
+        // DND information
+        int ret;
+        new Timer().scheduleAtFixedRate(new TimerTask() {
+            @SuppressLint("DefaultLocale")
+            @Override
+            public void run() {
+                try {
+                    dnd_fos.write(
+                            String.format("%d;%d\n",
+                                    System.currentTimeMillis(),
+                                    getDNDStatus()).getBytes()
+                    );
+                } catch (IOException | Settings.SettingNotFoundException e) {
+                    e.printStackTrace();
+                }
+            }
+        }, 0, 1000);
     }
 
-    public int getDNDStatus() throws Settings.SettingNotFoundException {
+    private int getDNDStatus() throws Settings.SettingNotFoundException {
         return Settings.Global.getInt(getContentResolver(), "zen_mode");
     }
 
-    private boolean checkPermissions() {
-        boolean check1 = ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED;
-        boolean check2 = ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED;
-        return check1 && check2;
-    }
-
-    private void requestPermissions() {
-        ActivityCompat.requestPermissions(this, new String[] {
-                Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION
-        }, PERMISSION);
-    }
-
-    class MyLocationListener implements LocationListener{
-
-
+    private class MyLocationListener implements LocationListener {
+        @SuppressLint("DefaultLocale")
         @Override
         public void onLocationChanged(@NonNull Location location) {
-            double latitude = location.getLatitude();
-            double longitude = location.getLongitude();
-
-            latitudeTextView.setText("" + latitude);
-            longitudeTextView.setText("" + longitude);
+            try {
+                gps_fos.write(
+                        String.format("%d;%f;%f\n",
+                                location.getTime(),
+                                location.getLatitude(),
+                                location.getLongitude()).getBytes()
+                );
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
 
         @Override

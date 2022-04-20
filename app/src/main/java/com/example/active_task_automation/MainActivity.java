@@ -8,26 +8,23 @@ import android.Manifest;
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.pm.PackageManager;
+import android.hardware.Sensor;
+import android.hardware.SensorEvent;
+import android.hardware.SensorEventListener;
+import android.hardware.SensorManager;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Bundle;
 import android.os.Environment;
 import android.provider.Settings;
-import android.widget.TextView;
-
-import org.w3c.dom.Text;
 
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.util.Timer;
 import java.util.TimerTask;
-
-//import com.google.android.gms.location.FusedLocationProviderClient;
-
 
 public class MainActivity extends AppCompatActivity {
     private File gps_fd;
@@ -37,16 +34,12 @@ public class MainActivity extends AppCompatActivity {
     private FileOutputStream dnd_fos;
 
     private File accelerometer_fd;
+    private FileOutputStream accelerometer_fos;
 
     private File barometer_fd;
-
+    private FileOutputStream barometer_fos;
 
     private int LOCATION_PERMISSION_CODE = 44;
-
-
-    private TextView longitudeTextView;
-    private TextView latitudeTextView;
-    private TextView DNDTextView;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -61,9 +54,25 @@ public class MainActivity extends AppCompatActivity {
             dnd_fd = new File(Environment.getExternalStorageDirectory().getAbsolutePath(), "dnd_data.csv");
             dnd_fos = new FileOutputStream(dnd_fd);
 
+            accelerometer_fd = new File(Environment.getExternalStorageDirectory().getAbsolutePath(), "accelerometer_data.csv");
+            accelerometer_fos = new FileOutputStream(accelerometer_fd);
+
+            barometer_fd = new File(Environment.getExternalStorageDirectory().getAbsolutePath(), "barometer_data.csv");
+            barometer_fos = new FileOutputStream(barometer_fd);
+
         } catch (FileNotFoundException e) {
             e.printStackTrace();
         }
+
+        SensorManager sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
+
+        // Accelerometer information
+        Sensor accelerometerSensor = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
+        sensorManager.registerListener(new MyAccelerometerListener(), accelerometerSensor, SensorManager.SENSOR_ACCELEROMETER);
+
+        // Pressure information
+        Sensor barometerSensor = sensorManager.getDefaultSensor(Sensor.TYPE_PRESSURE);
+        sensorManager.registerListener(new MyBarometerListener(), barometerSensor, SensorManager.SENSOR_ACCELEROMETER);
 
         // GPS information
         LocationManager locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
@@ -79,9 +88,7 @@ public class MainActivity extends AppCompatActivity {
             }, LOCATION_PERMISSION_CODE);
         }
 
-
         // DND information
-        int ret;
         new Timer().scheduleAtFixedRate(new TimerTask() {
             @SuppressLint("DefaultLocale")
             @Override
@@ -127,6 +134,50 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public void onProviderDisabled(@NonNull String provider) {
             LocationListener.super.onProviderDisabled(provider);
+        }
+    }
+
+    private class MyAccelerometerListener implements SensorEventListener {
+        @SuppressLint("DefaultLocale")
+        @Override
+        public void onSensorChanged(SensorEvent sensorEvent) {
+            try {
+                gps_fos.write(
+                        String.format("%d;%f\n",
+                                sensorEvent.timestamp,
+                                sensorEvent.values[0]).getBytes()
+                );
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
+        @Override
+        public void onAccuracyChanged(Sensor sensor, int i) {
+
+        }
+    }
+
+    private class MyBarometerListener implements SensorEventListener {
+        @SuppressLint("DefaultLocale")
+        @Override
+        public void onSensorChanged(SensorEvent sensorEvent) {
+            try {
+                barometer_fos.write(
+                        String.format("%d;%f;%f;%f\n",
+                                sensorEvent.timestamp,
+                                sensorEvent.values[0],
+                                sensorEvent.values[1],
+                                sensorEvent.values[2]).getBytes()
+                );
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
+        @Override
+        public void onAccuracyChanged(Sensor sensor, int i) {
+
         }
     }
 }

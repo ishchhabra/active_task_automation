@@ -142,7 +142,7 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public void onSensorChanged(SensorEvent sensorEvent) {
             try {
-                gps_fos.write(
+                accelerometer_fos.write(
                         String.format("%d;%f\n",
                                 sensorEvent.timestamp,
                                 sensorEvent.values[0]).getBytes()

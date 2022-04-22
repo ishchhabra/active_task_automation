@@ -39,12 +39,18 @@ public class MainActivity extends AppCompatActivity {
     private File barometer_fd;
     private FileOutputStream barometer_fos;
 
-    private int LOCATION_PERMISSION_CODE = 44;
+    private final int LOCATION_PERMISSION_CODE = 44;
+    private final int WRITE_EXTERNAL_STORAGE_PERMISSION_CODE = 112;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        // Request external write permissions
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this, new String[]{ Manifest.permission.WRITE_EXTERNAL_STORAGE }, WRITE_EXTERNAL_STORAGE_PERMISSION_CODE);
+        }
 
         // Open all files.
         try {

@@ -157,6 +157,11 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public void onLocationChanged(@NonNull Location location) {
             try {
+                Log.d("GPS", String.format("%d;%f;%f\n",
+                        location.getTime(),
+                        location.getLatitude(),
+                        location.getLongitude()));
+
                 gps_fos.write(
                         String.format("%d;%f;%f\n",
                                 location.getTime(),
@@ -169,14 +174,10 @@ public class MainActivity extends AppCompatActivity {
         }
 
         @Override
-        public void onProviderEnabled(@NonNull String provider) {
-            LocationListener.super.onProviderEnabled(provider);
-        }
+        public void onProviderEnabled(@NonNull String provider) { }
 
         @Override
-        public void onProviderDisabled(@NonNull String provider) {
-            LocationListener.super.onProviderDisabled(provider);
-        }
+        public void onProviderDisabled(@NonNull String provider) { }
     }
 
     private class MyAccelerometerListener implements SensorEventListener {

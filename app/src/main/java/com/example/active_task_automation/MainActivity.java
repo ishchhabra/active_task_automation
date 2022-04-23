@@ -18,6 +18,7 @@ import android.location.LocationManager;
 import android.os.Bundle;
 import android.os.Environment;
 import android.provider.Settings;
+import android.util.Log;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -50,8 +51,48 @@ public class MainActivity extends AppCompatActivity {
         // Request external write permissions
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this, new String[]{ Manifest.permission.WRITE_EXTERNAL_STORAGE }, WRITE_EXTERNAL_STORAGE_PERMISSION_CODE);
+            return;
         }
 
+        if (
+                ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED ||
+                ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this, new String[]{
+                    Manifest.permission.ACCESS_FINE_LOCATION,
+                    Manifest.permission.ACCESS_COARSE_LOCATION
+            }, LOCATION_PERMISSION_CODE);
+            return;
+        }
+
+        startRecording();
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        Log.d("ABC", "DEF");
+
+        boolean writePermission = ActivityCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED;
+        if (!writePermission) {
+            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, WRITE_EXTERNAL_STORAGE_PERMISSION_CODE);
+            return;
+        }
+
+        boolean gpsPermissions = ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED &&
+                ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED;
+        if (!gpsPermissions) {
+            ActivityCompat.requestPermissions(this, new String[]{
+                    Manifest.permission.ACCESS_FINE_LOCATION,
+                    Manifest.permission.ACCESS_COARSE_LOCATION
+            }, LOCATION_PERMISSION_CODE);
+            return;
+        }
+
+        startRecording();
+    }
+
+    @SuppressLint("MissingPermission")
+    private void startRecording() {
         // Open all files.
         try {
             gps_fd = new File(Environment.getExternalStorageDirectory().getAbsolutePath(), "gps_data.csv");
@@ -83,16 +124,7 @@ public class MainActivity extends AppCompatActivity {
         // GPS information
         LocationManager locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
         LocationListener locationListener = new MyLocationListener();
-        if (
-                ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED &&
-                ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
-            locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000, 1, locationListener);
-        } else {
-            ActivityCompat.requestPermissions(this, new String[]{
-                    Manifest.permission.ACCESS_FINE_LOCATION,
-                    Manifest.permission.ACCESS_COARSE_LOCATION
-            }, LOCATION_PERMISSION_CODE);
-        }
+        locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000, 1, locationListener);
 
         // DND information
         new Timer().scheduleAtFixedRate(new TimerTask() {
@@ -149,9 +181,11 @@ public class MainActivity extends AppCompatActivity {
         public void onSensorChanged(SensorEvent sensorEvent) {
             try {
                 accelerometer_fos.write(
-                        String.format("%d;%f\n",
+                        String.format("%d;%f;%f;%f\n",
                                 sensorEvent.timestamp,
-                                sensorEvent.values[0]).getBytes()
+                                sensorEvent.values[0],
+                                sensorEvent.values[1],
+                                sensorEvent.values[2]).getBytes()
                 );
             } catch (IOException e) {
                 e.printStackTrace();
@@ -170,11 +204,9 @@ public class MainActivity extends AppCompatActivity {
         public void onSensorChanged(SensorEvent sensorEvent) {
             try {
                 barometer_fos.write(
-                        String.format("%d;%f;%f;%f\n",
+                        String.format("%d;%f\n",
                                 sensorEvent.timestamp,
-                                sensorEvent.values[0],
-                                sensorEvent.values[1],
-                                sensorEvent.values[2]).getBytes()
+                                sensorEvent.values[0]).getBytes()
                 );
             } catch (IOException e) {
                 e.printStackTrace();

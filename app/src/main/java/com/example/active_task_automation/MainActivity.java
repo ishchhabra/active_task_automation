@@ -17,6 +17,8 @@ import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Bundle;
 import android.os.Environment;
+import android.os.Handler;
+import android.os.Looper;
 import android.provider.Settings;
 import android.util.Log;
 
@@ -79,7 +81,7 @@ public class MainActivity extends AppCompatActivity implements ActivityCompat.On
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
 
-        boolean writePermission = ActivityCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED;
+        boolean writePermission = ActivityCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED;
         if (!writePermission) {
             ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, WRITE_EXTERNAL_STORAGE_PERMISSION_CODE);
             return;
@@ -102,19 +104,32 @@ public class MainActivity extends AppCompatActivity implements ActivityCompat.On
     private void startRecording() {
         // Open all files.
         try {
-            gps_fd = new File(Environment.getExternalStorageDirectory().getAbsolutePath(), "gps_data.csv");
+            gps_fd = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS) + "/gps_data.csv");
+//                    new File(Environment.getExternalStorageDirectory().getAbsolutePath(), "gps_data.csv"); // Use this for old android versions.
+            if (!gps_fd.exists()) {
+                gps_fd.createNewFile();
+            }
             gps_fos = new FileOutputStream(gps_fd);
 
-            dnd_fd = new File(Environment.getExternalStorageDirectory().getAbsolutePath(), "dnd_data.csv");
+            dnd_fd = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS) + "/dnd_data.csv");
+            if (!dnd_fd.exists()) {
+                dnd_fd.createNewFile();
+            }
             dnd_fos = new FileOutputStream(dnd_fd);
 
-            accelerometer_fd = new File(Environment.getExternalStorageDirectory().getAbsolutePath(), "accelerometer_data.csv");
+            accelerometer_fd = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS) + "/accelerometer_data.csv");
+            if (!accelerometer_fd.exists()) {
+                accelerometer_fd.createNewFile();
+            }
             accelerometer_fos = new FileOutputStream(accelerometer_fd);
 
-            barometer_fd = new File(Environment.getExternalStorageDirectory().getAbsolutePath(), "barometer_data.csv");
+            barometer_fd = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS) + "/barometer_data.csv");
+            if (!barometer_fd.exists()) {
+                barometer_fd.createNewFile();
+            }
             barometer_fos = new FileOutputStream(barometer_fd);
 
-        } catch (FileNotFoundException e) {
+        } catch (IOException e) {
             e.printStackTrace();
         }
 
@@ -148,7 +163,7 @@ public class MainActivity extends AppCompatActivity implements ActivityCompat.On
                     e.printStackTrace();
                 }
             }
-        }, 0, 1000);
+        }, 1000, 1000);
     }
 
     private int getDNDStatus() throws Settings.SettingNotFoundException {

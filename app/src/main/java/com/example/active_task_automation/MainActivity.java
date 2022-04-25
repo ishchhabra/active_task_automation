@@ -21,6 +21,7 @@ import android.os.Handler;
 import android.os.Looper;
 import android.provider.Settings;
 import android.util.Log;
+import android.widget.TextView;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -45,10 +46,14 @@ public class MainActivity extends AppCompatActivity implements ActivityCompat.On
     private final int LOCATION_PERMISSION_CODE = 44;
     private final int WRITE_EXTERNAL_STORAGE_PERMISSION_CODE = 112;
 
+    TextView latitude;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        latitude = (TextView) findViewById(R.id.latitude);
 
         boolean allPermissionsPresent = true;
 
@@ -104,30 +109,17 @@ public class MainActivity extends AppCompatActivity implements ActivityCompat.On
     private void startRecording() {
         // Open all files.
         try {
-            gps_fd = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS) + "/gps_data.csv");
-//                    new File(Environment.getExternalStorageDirectory().getAbsolutePath(), "gps_data.csv"); // Use this for old android versions.
-            if (!gps_fd.exists()) {
-                gps_fd.createNewFile();
-            }
-            gps_fos = new FileOutputStream(gps_fd);
+            gps_fd = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS), "gps_data.csv");
+            gps_fos = new FileOutputStream(gps_fd, true);
 
-            dnd_fd = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS) + "/dnd_data.csv");
-            if (!dnd_fd.exists()) {
-                dnd_fd.createNewFile();
-            }
-            dnd_fos = new FileOutputStream(dnd_fd);
+            dnd_fd = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS), "dnd_data.csv");
+            dnd_fos = new FileOutputStream(dnd_fd, true);
 
-            accelerometer_fd = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS) + "/accelerometer_data.csv");
-            if (!accelerometer_fd.exists()) {
-                accelerometer_fd.createNewFile();
-            }
-            accelerometer_fos = new FileOutputStream(accelerometer_fd);
+            accelerometer_fd = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS), "accelerometer_data.csv");
+            accelerometer_fos = new FileOutputStream(accelerometer_fd, true);
 
-            barometer_fd = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS) + "/barometer_data.csv");
-            if (!barometer_fd.exists()) {
-                barometer_fd.createNewFile();
-            }
-            barometer_fos = new FileOutputStream(barometer_fd);
+            barometer_fd = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS), "barometer_data.csv");
+            barometer_fos = new FileOutputStream(barometer_fd, true);
 
         } catch (IOException e) {
             e.printStackTrace();
@@ -180,6 +172,8 @@ public class MainActivity extends AppCompatActivity implements ActivityCompat.On
                         location.getLatitude(),
                         location.getLongitude()));
 
+                latitude.setText("" + location.getLatitude());
+
                 gps_fos.write(
                         String.format("%d;%f;%f\n",
                                 location.getTime(),
@@ -190,12 +184,6 @@ public class MainActivity extends AppCompatActivity implements ActivityCompat.On
                 e.printStackTrace();
             }
         }
-
-        @Override
-        public void onProviderEnabled(@NonNull String provider) { }
-
-        @Override
-        public void onProviderDisabled(@NonNull String provider) { }
     }
 
     private class MyAccelerometerListener implements SensorEventListener {

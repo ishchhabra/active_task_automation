@@ -56,7 +56,7 @@ public class BackgroundService extends Service {
     @Override
     public void onCreate() {
         super.onCreate();
-
+        PendingIntent pendingIntent = null;
         NotificationCompat.Builder builder = new NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID)
                 .setOngoing(false)
                 .setSmallIcon(R.drawable.ic_launcher_background);
@@ -64,9 +64,19 @@ public class BackgroundService extends Service {
         Intent stopSelf = new Intent(this, BackgroundService.class);
         stopSelf.setAction(ACTION_STOP_SERVICE);
 
-        PendingIntent pStopSelf = PendingIntent.getService(this, 0, stopSelf, PendingIntent.FLAG_CANCEL_CURRENT);
+        //PendingIntent pStopSelf = PendingIntent.getService(this, 0, stopSelf, PendingIntent.FLAG_CANCEL_CURRENT);
 
-        builder.addAction(R.drawable.ic_launcher_background, "STOP", pStopSelf);
+        Intent notificationIntent = new Intent();
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+            pendingIntent = PendingIntent.getActivity
+                    (this, 0, notificationIntent, PendingIntent.FLAG_MUTABLE);
+        }
+        else
+        {
+            pendingIntent = PendingIntent.getActivity
+                    (this, 0, notificationIntent, PendingIntent.FLAG_ONE_SHOT);
+        }
+        builder.addAction(R.drawable.ic_launcher_background, "STOP", pendingIntent);
 
         NotificationManager notificationManager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {

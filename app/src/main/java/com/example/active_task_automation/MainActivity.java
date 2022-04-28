@@ -131,7 +131,7 @@ public class MainActivity extends AppCompatActivity implements ActivityCompat.On
                 public void run() {
                     waitForLocationPermission(locationManager);
                 }
-            }, 1000);
+            }, 30000);
         }
     }
 
@@ -144,7 +144,4 @@ public class MainActivity extends AppCompatActivity implements ActivityCompat.On
             finish();
         }
     }
-
-
-
 }

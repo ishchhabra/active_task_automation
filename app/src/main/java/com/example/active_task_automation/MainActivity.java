@@ -14,17 +14,13 @@ import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
-import android.location.Criteria;
 import android.location.Location;
-import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
-import android.os.Handler;
 import android.os.Looper;
 import android.provider.Settings;
-import android.util.Log;
 import android.widget.TextView;
 
 import com.google.android.gms.location.FusedLocationProviderClient;
@@ -34,17 +30,12 @@ import com.google.android.gms.location.LocationResult;
 import com.google.android.gms.location.LocationServices;
 
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.util.Timer;
 import java.util.TimerTask;
-import java.util.function.Consumer;
 
 public class MainActivity extends AppCompatActivity implements ActivityCompat.OnRequestPermissionsResultCallback {
-    private FusedLocationProviderClient fusedLocationProviderClient;
-
     private File gps_fd;
     private FileOutputStream gps_fos;
 
@@ -63,7 +54,6 @@ public class MainActivity extends AppCompatActivity implements ActivityCompat.On
 
     TextView latitude;
 
-    @RequiresApi(api = Build.VERSION_CODES.Q)
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -76,8 +66,19 @@ public class MainActivity extends AppCompatActivity implements ActivityCompat.On
         boolean hasBackgroundLocationPermission = ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_BACKGROUND_LOCATION) == PackageManager.PERMISSION_GRANTED;
 
         // Request external write permissions
-        if (hasWritePermission && hasLocationPermission && hasBackgroundLocationPermission) {
-            startRecording();
+
+        if (hasWritePermission && hasLocationPermission) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) { // Need to ask BACKGROUND_LOCATION permission.
+                if (hasBackgroundLocationPermission) {
+                    startRecording();
+                } else {
+                    ActivityCompat.requestPermissions(this, new String[]{
+                            Manifest.permission.ACCESS_BACKGROUND_LOCATION
+                    }, BACKGROUND_LOCATION_PERMISSION_CODE);
+                }
+            } else {
+                startRecording();
+            }
         } else {
             if (!hasWritePermission) {
                 ActivityCompat.requestPermissions(this, new String[]{
@@ -86,18 +87,11 @@ public class MainActivity extends AppCompatActivity implements ActivityCompat.On
                         Manifest.permission.MANAGE_EXTERNAL_STORAGE
                 }, WRITE_EXTERNAL_STORAGE_PERMISSION_CODE);
             } else {
-                if (!hasLocationPermission) {
-                    ActivityCompat.requestPermissions(this, new String[]{
-                            Manifest.permission.ACCESS_FINE_LOCATION
-                    }, LOCATION_PERMISSION_CODE);
-                } else {
-                    ActivityCompat.requestPermissions(this, new String[]{
-                            Manifest.permission.ACCESS_BACKGROUND_LOCATION
-                    }, BACKGROUND_LOCATION_PERMISSION_CODE);
-                }
+                ActivityCompat.requestPermissions(this, new String[]{
+                        Manifest.permission.ACCESS_FINE_LOCATION
+                }, LOCATION_PERMISSION_CODE);
             }
         }
-
     }
 
     @Override
@@ -128,9 +122,13 @@ public class MainActivity extends AppCompatActivity implements ActivityCompat.On
             }
         } else if (requestCode == LOCATION_PERMISSION_CODE) {
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                ActivityCompat.requestPermissions(this, new String[]{
-                        Manifest.permission.ACCESS_BACKGROUND_LOCATION
-                }, BACKGROUND_LOCATION_PERMISSION_CODE);
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) { // Need to ask BACKGROUND_LOCATION permission.
+                    ActivityCompat.requestPermissions(this, new String[]{
+                            Manifest.permission.ACCESS_BACKGROUND_LOCATION
+                    }, BACKGROUND_LOCATION_PERMISSION_CODE);
+                } else {
+                    startRecording();
+                }
             }
         } else if (requestCode == BACKGROUND_LOCATION_PERMISSION_CODE) {
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
@@ -225,30 +223,11 @@ public class MainActivity extends AppCompatActivity implements ActivityCompat.On
 
     @SuppressLint("MissingPermission")
     private void startRecordingLocationInfo(LocationManager locationManager) {
-        fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this);
-
-        LocationRequest locationRequest = new LocationRequest();
-        locationRequest.setInterval(10000);
-        locationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
-
-        fusedLocationProviderClient.requestLocationUpdates(locationRequest, new LocationCallback() {
-            @SuppressLint("DefaultLocale")
-            @Override
-            public void onLocationResult(@NonNull LocationResult locationResult) {
-                Location location = locationResult.getLastLocation();
-
-                try {
-                    gps_fos.write(
-                            String.format("%d;%f;%f\n",
-                                    location.getTime(),
-                                    location.getLatitude(),
-                                    location.getLongitude()).getBytes()
-                    );
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
-        }, Looper.getMainLooper());
+        // Start foreground service.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            Context applicationContext = getApplicationContext();
+            applicationContext.startForegroundService(new Intent(applicationContext, BackgroundService.class));
+        }
     }
 
     private int getDNDStatus() throws Settings.SettingNotFoundException {

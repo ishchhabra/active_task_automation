@@ -14,7 +14,7 @@ class DataPipeline:
         dnd_data = self.load_dnd(participant)
         gps_data = self.load_gps(participant)
 
-        self.data = self.time_synchronize(dnd_data, gps_data)
+        self.dataframe = self.time_synchronize(dnd_data, gps_data)
 
     @staticmethod
     def load_dnd(participant: str):
@@ -34,22 +34,16 @@ class DataPipeline:
 
     @staticmethod
     def time_synchronize(dnd_data: pandas.DataFrame, gps_data: pandas.DataFrame):
-        # Given two dataframes, take a window of length 2 * GPS_WINDOW_SIZE from [dnd_timestamp - GPS_WINDOW_SIZE, dnd_timestamp + GPS_WINDOW_SIZE].
-        # Find all the gps rows with timestamp in this range, and then average over axis=0.
-        # Do this for all the rows in DND dataframe, and return new dataframe which has ['timestamp' (from dnd), 'dnd_value', 'latitude', 'longitude']
+        def gps_windowed_average(row) -> pandas.Series:
+            timestamp = row['timestamp']
 
-        # dnd_data_np = dnd_data.to_numpy()
-        # gps_data_np = dnd_data.to_numpy()
-
-        def gps_windowed_average(timestamp: int) -> Tuple[int, int]:
             rows = gps_data.loc[
                 (gps_data["timestamp"] >= timestamp - GPS_WINDOW_SIZE)
                 & (gps_data["timestamp"] <= timestamp + GPS_WINDOW_SIZE)
             ]
 
-            return rows.mean(axis=0)
+            avg = rows.mean(axis=0)
+            return pandas.Series([avg['latitude'], avg['longitude']])
 
-        for i in range(dnd_data.size):
-            gps_windowed_average(dnd_data["timestamp"][i])
-
-        return dnd_data.merge(gps_data, on="timestamp")
+        result_df = dnd_data.copy()
+        result_df[['latitude', 'longitude']] = result_df.apply(gps_windowed_average, axis=1)

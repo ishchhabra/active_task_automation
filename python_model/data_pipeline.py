@@ -47,3 +47,4 @@ class DataPipeline:
 
         result_df = dnd_data.copy()
         result_df[['latitude', 'longitude']] = result_df.apply(gps_windowed_average, axis=1)
+        return result_df

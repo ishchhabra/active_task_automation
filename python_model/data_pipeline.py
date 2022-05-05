@@ -65,7 +65,6 @@ class DataPipeline:
             f"{DATA_FOLDER_PATH}/{participant}/{BAROMETER_FILE_NAME}", sep=";"
         )
         dataframe.columns = ["timestamp", "barometer"]
-        dataframe["timestamp"] = dataframe["timestamp"]
         return dataframe
 
     @staticmethod
@@ -79,7 +78,6 @@ class DataPipeline:
             "accelerometer_y",
             "accelerometer_z",
         ]
-        dataframe["timestamp"] = dataframe["timestamp"]
         return dataframe
 
     @staticmethod
@@ -99,7 +97,7 @@ class DataPipeline:
         if accelerometer_data is not None:
             accelerometer_data["timestamp"] = accelerometer_data["timestamp"] / 1000
             accelerometer_data["timestamp"] = accelerometer_data["timestamp"] - (
-                accelerometer_data["timestamp"][0] - dnd_data["timestamp"]
+                accelerometer_data["timestamp"][0] - dnd_data["timestamp"][0]
             )
 
         def accelerometer_windowed_averge(row) -> pd.DataFrame:
@@ -157,4 +155,5 @@ class DataPipeline:
                 accelerometer_windowed_averge, axis=1
             )
 
+        breakpoint()
         return result_df

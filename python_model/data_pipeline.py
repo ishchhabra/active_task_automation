@@ -3,7 +3,7 @@ from typing import Tuple
 import pandas as pd
 import numpy as np
 import os
-
+from sklearn.preprocessing import minmax_scale
 
 DATA_FOLDER_PATH = "data"
 GPS_FILE_NAME = "gps_data.csv"
@@ -32,12 +32,15 @@ class DataPipeline:
             if use_barometer is True:
                 barometer_data = self.load_barometer(participant)
 
+            accelerometer_data = None
             if use_accelerometer is True:
                 accelerometer_data = self.load_accelerometer(participant)
 
             self.dataframe = self.time_synchronize(
                 dnd_data, gps_data, barometer_data, accelerometer_data
             )
+
+            self.dataframe = self.normalize(self.dataframe)
 
             self.dataframe.to_csv(
                 f"{DATA_FOLDER_PATH}/{participant}/cached_data.csv", sep=";"
@@ -88,17 +91,18 @@ class DataPipeline:
         accelerometer_data: pd.DataFrame = None,
     ):
         # Minor hack on sensors' timestamps since it wasn't recorded correctly
-        if barometer_data is not None:
-            barometer_data["timestamp"] = barometer_data["timestamp"] / 1000
-            barometer_data["timestamp"] = barometer_data["timestamp"] - (
-                barometer_data["timestamp"][0] - dnd_data["timestamp"][0]
-            )
+        # Doesn't seem to work
+        # if barometer_data is not None:
+        #     barometer_data["timestamp"] = barometer_data["timestamp"] / 1000
+        #     barometer_data["timestamp"] = barometer_data["timestamp"] - (
+        #         barometer_data["timestamp"][0] - dnd_data["timestamp"][0]
+        #     )
 
-        if accelerometer_data is not None:
-            accelerometer_data["timestamp"] = accelerometer_data["timestamp"] / 1000
-            accelerometer_data["timestamp"] = accelerometer_data["timestamp"] - (
-                accelerometer_data["timestamp"][0] - dnd_data["timestamp"][0]
-            )
+        # if accelerometer_data is not None:
+        #     accelerometer_data["timestamp"] = accelerometer_data["timestamp"] / 1000
+        #     accelerometer_data["timestamp"] = accelerometer_data["timestamp"] - (
+        #         accelerometer_data["timestamp"][0] - dnd_data["timestamp"][0]
+        #     )
 
         def accelerometer_windowed_averge(row) -> pd.DataFrame:
             timestamp = row["timestamp"]
@@ -155,5 +159,9 @@ class DataPipeline:
                 accelerometer_windowed_averge, axis=1
             )
 
-        breakpoint()
         return result_df
+
+    @staticmethod
+    def normalize(dataframe: pd.DataFrame):
+        dataframe[["timestamp", "latitude", "longitude"]] = minmax_scale(dataframe[["timestamp", "latitude", "longitude"]])
+        return dataframe

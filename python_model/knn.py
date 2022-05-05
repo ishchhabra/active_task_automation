@@ -12,12 +12,16 @@ def knn(dataframes: list):
 
         train_df = pd.concat(train_dataframes)
         train_df.dropna(inplace=True)
+        train_df = train_df.drop(columns=["timestamp"])
+
         X_train = train_df.drop(columns=["dnd_value"])
         y_train = train_df["dnd_value"]
         model.fit(X_train, y_train)
 
         test_df: pd.DataFrame = dataframes[i]
         test_df.dropna(inplace=True)
+        test_df = test_df.drop(columns=['timestamp'])
+
         X_test = test_df.drop(columns=["dnd_value"])
         y_test = test_df["dnd_value"]
 
